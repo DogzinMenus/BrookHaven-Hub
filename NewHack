@@ -1,0 +1,638 @@
+-- DataBreakerZ - BrookHaven | UI Profissional Estilo Hub AvanÃ§ado
+-- Criado por DogzinGhost_YT
+
+-- ServiÃ§os
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local player = Players.LocalPlayer
+local PlayerGui = player:WaitForChild("PlayerGui")
+
+-- FunÃ§Ã£o utilitÃ¡ria para criar cantos arredondados
+local function addCorner(obj, radius)
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, radius or 10)
+	corner.Parent = obj
+end
+
+-- ScreenGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "DataBreakerZ_UI"
+screenGui.Parent = PlayerGui
+screenGui.ResetOnSpawn = false
+
+-- Frame Principal
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 600, 0, 450)
+mainFrame.Position = UDim2.new(0.5, -300, 0.5, -225)
+mainFrame.BackgroundColor3 = Color3.fromRGB(28, 28, 30)
+mainFrame.BackgroundTransparency = 0.4
+mainFrame.BorderSizePixel = 0
+mainFrame.Parent = screenGui
+addCorner(mainFrame, 12)
+
+-- Drag
+local dragging = false
+local dragInput, dragStart, startPos
+
+mainFrame.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = true
+		dragStart = input.Position
+		startPos = mainFrame.Position
+	end
+end)
+
+mainFrame.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement then
+		dragInput = input
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if input == dragInput and dragging then
+		local delta = input.Position - dragStart
+		mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = false
+	end
+end)
+
+-- TopBar
+local titleBar = Instance.new("Frame")
+titleBar.Size = UDim2.new(1, 0, 0, 45)
+titleBar.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
+titleBar.BorderSizePixel = 0
+titleBar.Parent = mainFrame
+
+local titleText = Instance.new("TextLabel")
+titleText.Size = UDim2.new(1, -35, 1, 0)
+titleText.Position = UDim2.new(0, 10, 0, 0)
+titleText.BackgroundTransparency = 1
+titleText.Text = "ðŸ§  DataBreakerZ - BrookHaven UI"
+titleText.TextColor3 = Color3.new(1, 1, 1)
+titleText.Font = Enum.Font.GothamBlack
+titleText.TextScaled = true
+titleText.TextXAlignment = Enum.TextXAlignment.Left
+titleText.Parent = titleBar
+
+-- BotÃ£o Fechar
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 30, 0, 30)
+closeBtn.Position = UDim2.new(1, -40, 0.5, -15)
+closeBtn.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
+closeBtn.Text = "X"
+closeBtn.TextScaled = true
+closeBtn.TextColor3 = Color3.new(1, 1, 1)
+closeBtn.Font = Enum.Font.GothamBold
+addCorner(closeBtn, 8)
+closeBtn.Parent = titleBar
+
+closeBtn.MouseButton1Click:Connect(function()
+	mainFrame.Visible = false
+end)
+
+-- Toggle com Tecla F
+UserInputService.InputBegan:Connect(function(input, processed)
+	if not processed and input.KeyCode == Enum.KeyCode.F then
+		mainFrame.Visible = not mainFrame.Visible
+	end
+end)
+
+-- Abas Laterais com Scroll
+local tabHolder = Instance.new("ScrollingFrame")
+tabHolder.Size = UDim2.new(0, 140, 1, -50)
+tabHolder.Position = UDim2.new(0, 0, 0, 45)
+tabHolder.BackgroundColor3 = Color3.fromRGB(35, 35, 38)
+tabHolder.BorderSizePixel = 0
+tabHolder.CanvasSize = UDim2.new(0, 0, 2, 0)
+tabHolder.ScrollBarThickness = 6
+tabHolder.ScrollingDirection = Enum.ScrollingDirection.Y
+addCorner(tabHolder, 0)
+tabHolder.Parent = mainFrame
+
+-- Layout para botÃµes de abas
+local tabLayout = Instance.new("UIListLayout", tabHolder)
+tabLayout.Padding = UDim.new(0, 5)
+tabLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+-- Container de ConteÃºdo com Scroll
+local contentHolder = Instance.new("ScrollingFrame")
+contentHolder.Size = UDim2.new(1, -150, 1, -50)
+contentHolder.Position = UDim2.new(0, 150, 0, 45)
+contentHolder.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+contentHolder.BorderSizePixel = 0
+contentHolder.CanvasSize = UDim2.new(0, 0, 2, 0)
+contentHolder.ScrollBarThickness = 6
+contentHolder.ScrollingDirection = Enum.ScrollingDirection.Y
+addCorner(contentHolder, 10)
+contentHolder.Parent = mainFrame
+
+-- Layout de conteÃºdo
+local contentLayout = Instance.new("UIListLayout", contentHolder)
+contentLayout.Padding = UDim.new(0, 10)
+contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+-- FunÃ§Ã£o Criar Aba
+local pages = {}
+
+local function createTab(tabName, icon)
+	local tabBtn = Instance.new("TextButton")
+	tabBtn.Size = UDim2.new(1, -10, 0, 35)
+	tabBtn.Text = icon .. " " .. tabName
+	tabBtn.TextColor3 = Color3.new(1, 1, 1)
+	tabBtn.Font = Enum.Font.Gotham
+	tabBtn.TextSize = 14
+	tabBtn.BackgroundColor3 = Color3.fromRGB(55, 55, 60)
+	tabBtn.AutoButtonColor = true
+	addCorner(tabBtn, 6)
+	tabBtn.Parent = tabHolder
+
+	local tabPage = Instance.new("Frame")
+	tabPage.Name = tabName
+	tabPage.Size = UDim2.new(1, -20, 0, 350)
+	tabPage.BackgroundTransparency = 1
+	tabPage.Visible = false
+	tabPage.Parent = contentHolder
+
+	pages[tabBtn] = tabPage
+
+	tabBtn.MouseButton1Click:Connect(function()
+		for btn, page in pairs(pages) do
+			page.Visible = false
+			btn.BackgroundColor3 = Color3.fromRGB(55, 55, 60)
+		end
+		tabPage.Visible = true
+		tabBtn.BackgroundColor3 = Color3.fromRGB(70, 130, 180)
+	end)
+
+	return tabPage
+end
+-- PARTE 2 - Scroll em Abas e BotÃµes + Frame ArrastÃ¡vel
+
+-- Scroll para abas laterais
+local tabScroll = Instance.new("ScrollingFrame")
+tabScroll.Size = UDim2.new(1, 0, 1, 0)
+tabScroll.CanvasSize = UDim2.new(0, 0, 0, 400)
+tabScroll.ScrollBarThickness = 6
+tabScroll.BackgroundTransparency = 1
+tabScroll.BorderSizePixel = 0
+tabScroll.Parent = tabHolder
+
+-- Reposicionar os botÃµes de aba dentro do scroll
+for _, v in pairs(tabHolder:GetChildren()) do
+	if v:IsA("TextButton") then
+		v.Parent = tabScroll
+	end
+end
+
+-- Scroll para conteÃºdo da aba (botÃµes dentro das pÃ¡ginas)
+local function adicionarScroll(frame)
+	local scroller = Instance.new("ScrollingFrame")
+	scroller.Size = UDim2.new(1, 0, 1, 0)
+	scroller.CanvasSize = UDim2.new(0, 0, 0, 600)
+	scroller.ScrollBarThickness = 8
+	scroller.BackgroundTransparency = 1
+	scroller.BorderSizePixel = 0
+	scroller.Name = "Scroller"
+	scroller.Parent = frame
+
+	-- mover os filhos para o scroller
+	for _, v in pairs(frame:GetChildren()) do
+		if v:IsA("GuiObject") and v.Name ~= "Scroller" then
+			v.Parent = scroller
+		end
+	end
+end
+
+adicionarScroll(trollsPage)
+adicionarScroll(modsPage)
+adicionarScroll(visualPage)
+adicionarScroll(soundPage)
+adicionarScroll(advancedPage)
+adicionarScroll(themePage)
+
+-- Deixar Frame ArrastÃ¡vel (Principal + BotÃ£o)
+local dragging = false
+local dragInput, dragStart, startPos
+
+titleBar.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = true
+		dragStart = input.Position
+		startPos = mainFrame.Position
+
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
+	end
+end)
+
+titleBar.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement then
+		dragInput = input
+	end
+end)
+
+game:GetService("UserInputService").InputChanged:Connect(function(input)
+	if input == dragInput and dragging then
+		local delta = input.Position - dragStart
+		mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
+									   startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	end
+end)
+
+-- Frame do botÃ£o Toggle tambÃ©m arrastÃ¡vel
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(0, 35, 0, 35)
+toggleBtn.Position = UDim2.new(0, 15, 0.5, -20)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+toggleBtn.Text = "â˜°"
+toggleBtn.TextColor3 = Color3.new(1, 1, 1)
+toggleBtn.Font = Enum.Font.GothamBold
+toggleBtn.TextScaled = true
+addCorner(toggleBtn, 8)
+toggleBtn.Parent = screenGui
+
+toggleBtn.MouseButton1Click:Connect(function()
+	mainFrame.Visible = not mainFrame.Visible
+end)
+
+-- BotÃ£o Toggle arrastÃ¡vel
+local draggingBtn = false
+local dragStartBtn, startPosBtn
+
+toggleBtn.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		draggingBtn = true
+		dragStartBtn = input.Position
+		startPosBtn = toggleBtn.Position
+
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				draggingBtn = false
+			end
+		end)
+	end
+end)
+
+toggleBtn.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement then
+		dragInput = input
+	end
+end)
+
+game:GetService("UserInputService").InputChanged:Connect(function(input)
+	if input == dragInput and draggingBtn then
+		local delta = input.Position - dragStartBtn
+		toggleBtn.Position = UDim2.new(startPosBtn.X.Scale, startPosBtn.X.Offset + delta.X,
+									   startPosBtn.Y.Scale, startPosBtn.Y.Offset + delta.Y)
+	end
+end)
+-- PARTE 3 - FunPage com Skins + FinalizaÃ§Ãµes e OtimizaÃ§Ãµes
+
+-- Criar nova aba: DiversÃ£o
+local funTab = createTabButton("ðŸŽ­ DiversÃ£o", 280)
+local funPage = Instance.new("Frame")
+funPage.Size = UDim2.new(1, 0, 1, 0)
+funPage.BackgroundTransparency = 1
+funPage.Visible = false
+funPage.Parent = contentFrame
+
+funTab.MouseButton1Click:Connect(function()
+	showPage(funPage)
+end)
+
+-- Scroll na aba
+adicionarScroll(funPage)
+
+-- Campo de input para nome do jogador (skin copiar)
+local skinInput = Instance.new("TextBox")
+skinInput.Size = UDim2.new(0, 300, 0, 35)
+skinInput.Position = UDim2.new(0, 10, 0, 20)
+skinInput.PlaceholderText = "Nome do player para copiar skin"
+skinInput.Text = ""
+skinInput.Font = Enum.Font.Gotham
+skinInput.TextSize = 14
+skinInput.TextColor3 = Color3.new(1, 1, 1)
+skinInput.BackgroundColor3 = Color3.fromRGB(70, 70, 80)
+skinInput.ClearTextOnFocus = false
+skinInput.Parent = funPage
+addCorner(skinInput, 6)
+
+-- BotÃ£o: Copiar Skin
+local copySkinBtn = speedBtn:Clone()
+copySkinBtn.Text = "ðŸ“‹ Copiar Skin do Jogador"
+copySkinBtn.Position = UDim2.new(0, 10, 0, 70)
+copySkinBtn.Parent = funPage
+
+copySkinBtn.MouseButton1Click:Connect(function()
+	local name = skinInput.Text
+	local target = Players:FindFirstChild(name)
+
+	if target and target.Character then
+		local char = player.Character
+		for _, item in pairs(char:GetChildren()) do
+			if item:IsA("Shirt") or item:IsA("Pants") or item:IsA("Accessory") then
+				item:Destroy()
+			end
+		end
+
+		for _, item in pairs(target.Character:GetChildren()) do
+			if item:IsA("Shirt") then
+				local shirt = Instance.new("Shirt")
+				shirt.ShirtTemplate = item.ShirtTemplate
+				shirt.Parent = char
+			end
+			if item:IsA("Pants") then
+				local pants = Instance.new("Pants")
+				pants.PantsTemplate = item.PantsTemplate
+				pants.Parent = char
+			end
+			if item:IsA("Accessory") then
+				local acc = item:Clone()
+				acc.Parent = char
+			end
+		end
+
+		efeitoSkin()
+	end
+end)
+
+-- BotÃ£o: Randomizar Skin
+local randomBtn = speedBtn:Clone()
+randomBtn.Text = "ðŸŽ² Skin AleatÃ³ria"
+randomBtn.Position = UDim2.new(0, 10, 0, 120)
+randomBtn.Parent = funPage
+
+randomBtn.MouseButton1Click:Connect(function()
+	local allPlayers = Players:GetPlayers()
+	local randomPlayer = allPlayers[math.random(1, #allPlayers)]
+
+	if randomPlayer and randomPlayer.Character then
+		skinInput.Text = randomPlayer.Name
+		copySkinBtn:Activate()
+		efeitoSkin()
+	end
+end)
+
+-- BotÃ£o: Salvar Skin Atual
+local saveBtn = speedBtn:Clone()
+saveBtn.Text = "ðŸ’¾ Salvar Minha Skin"
+saveBtn.Position = UDim2.new(0, 10, 0, 170)
+saveBtn.Parent = funPage
+
+saveBtn.MouseButton1Click:Connect(function()
+	local char = player.Character
+	savedShirt = nil
+	savedPants = nil
+	savedAccessories = {}
+
+	for _, item in pairs(char:GetChildren()) do
+		if item:IsA("Shirt") then savedShirt = item.ShirtTemplate end
+		if item:IsA("Pants") then savedPants = item.PantsTemplate end
+		if item:IsA("Accessory") then table.insert(savedAccessories, item:Clone()) end
+	end
+
+	print("âœ… Skin salva com sucesso!")
+end)
+
+-- BotÃ£o: Restaurar Skin Salva
+local restoreBtn = speedBtn:Clone()
+restoreBtn.Text = "â™»ï¸ Restaurar Skin"
+restoreBtn.Position = UDim2.new(0, 10, 0, 220)
+restoreBtn.Parent = funPage
+
+restoreBtn.MouseButton1Click:Connect(function()
+	local char = player.Character
+
+	for _, v in pairs(char:GetChildren()) do
+		if v:IsA("Shirt") or v:IsA("Pants") or v:IsA("Accessory") then
+			v:Destroy()
+		end
+	end
+
+	if savedShirt then
+		local shirt = Instance.new("Shirt")
+		shirt.ShirtTemplate = savedShirt
+		shirt.Parent = char
+	end
+
+	if savedPants then
+		local pants = Instance.new("Pants")
+		pants.PantsTemplate = savedPants
+		pants.Parent = char
+	end
+
+	for _, acc in pairs(savedAccessories) do
+		local clone = acc:Clone()
+		clone.Parent = char
+	end
+
+	efeitoSkin()
+	print("âœ… Skin restaurada com sucesso!")
+end)
+
+-- Efeito de skin visual (disco neon)
+efeitoSkin = function()
+	local part = Instance.new("Part")
+	part.Size = Vector3.new(6, 0.5, 6)
+	part.Anchored = true
+	part.CanCollide = false
+	part.Transparency = 0.4
+	part.Color = Color3.fromRGB(255, 255, 100)
+	part.Material = Enum.Material.Neon
+	part.CFrame = player.Character:FindFirstChild("HumanoidRootPart").CFrame * CFrame.new(0, -3, 0)
+	part.Parent = workspace
+
+	local tweenInfo = TweenInfo.new(1.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	local tween = TweenService:Create(part, tweenInfo, {Size = Vector3.new(10, 0.5, 10), Transparency = 1})
+	tween:Play()
+
+	game:GetService("Debris"):AddItem(part, 2)
+end
+-- ðŸŒŸ Parte 4: Melhorias Visuais, Rolagem, Drag e Extras | DataBreakerZ - BrookHaven UI
+
+local UIS = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+
+-- FunÃ§Ã£o para tornar objetos arrastÃ¡veis
+local function makeDraggable(frame)
+	local dragToggle = nil
+	local dragInput, dragStart, startPos
+
+	local function update(input)
+		local delta = input.Position - dragStart
+		frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
+			startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	end
+
+	frame.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragToggle = true
+			dragStart = input.Position
+			startPos = frame.Position
+
+			input.Changed:Connect(function()
+				if input.UserInputState == Enum.UserInputState.End then
+					dragToggle = false
+				end
+			end)
+		end
+	end)
+
+	frame.InputChanged:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseMovement then
+			dragInput = input
+		end
+	end)
+
+	UIS.InputChanged:Connect(function(input)
+		if input == dragInput and dragToggle then
+			update(input)
+		end
+	end)
+end
+
+-- Tornar mainFrame e botÃ£o de fechar arrastÃ¡veis
+makeDraggable(mainFrame)
+makeDraggable(titleBar)
+
+-- === Rolagem nas Abas === --
+local tabScroller = Instance.new("ScrollingFrame")
+tabScroller.Size = UDim2.new(1, 0, 1, 0)
+tabScroller.CanvasSize = UDim2.new(0, 0, 0, 600)
+tabScroller.ScrollBarThickness = 4
+tabScroller.BackgroundTransparency = 1
+tabScroller.Parent = tabHolder
+
+for _, oldBtn in pairs(tabHolder:GetChildren()) do
+	if oldBtn:IsA("TextButton") then
+		oldBtn.Parent = nil
+	end
+end
+
+-- Refazer createTabButton para tabScroller
+local tabY = 10
+local function createTabButton(name)
+	local btn = Instance.new("TextButton")
+	btn.Size = UDim2.new(1, -20, 0, 35)
+	btn.Position = UDim2.new(0, 10, 0, tabY)
+	btn.Text = name
+	btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+	btn.Font = Enum.Font.GothamMedium
+	btn.TextSize = 14
+	btn.BackgroundColor3 = Color3.fromRGB(55, 55, 60)
+	btn.AutoButtonColor = true
+	addCorner(btn, 6)
+	btn.Parent = tabScroller
+	tabY = tabY + 45
+	return btn
+end
+
+-- Recriar as abas usando nova funÃ§Ã£o
+trollTab = createTabButton("ðŸ˜ˆ Trolls")
+modsTab = createTabButton("âš™ï¸ Player Mods")
+visualTab = createTabButton("ðŸŽ¨ Visual")
+soundTab = createTabButton("ðŸ”Š Som Troll")
+advancedTab = createTabButton("ðŸšš Troll AvanÃ§ado")
+themeTab = createTabButton("ðŸŽ¨ Tema")
+
+-- Ajustar rolagem dinÃ¢mica
+tabScroller.CanvasSize = UDim2.new(0, 0, 0, tabY + 10)
+
+-- === Rolagem nos botÃµes de cada aba === --
+local function addScrollToPage(page)
+	local scrollFrame = Instance.new("ScrollingFrame")
+	scrollFrame.Size = UDim2.new(1, 0, 1, 0)
+	scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 500)
+	scrollFrame.ScrollBarThickness = 6
+	scrollFrame.BackgroundTransparency = 1
+	scrollFrame.Parent = page
+	return scrollFrame
+end
+
+-- Reorganizar pÃ¡ginas dentro de scrolls
+local trollScroll = addScrollToPage(trollsPage)
+local modsScroll = addScrollToPage(modsPage)
+local visualScroll = addScrollToPage(visualPage)
+local soundScroll = addScrollToPage(soundPage)
+local advancedScroll = addScrollToPage(advancedPage)
+local themeScroll = addScrollToPage(themePage)
+
+-- Mover conteÃºdos para os scrolls
+for _, frame in pairs({trollsPage, modsPage, visualPage, soundPage, advancedPage, themePage}) do
+	for _, child in pairs(frame:GetChildren()) do
+		if child:IsA("TextButton") or child:IsA("TextBox") or child:IsA("TextLabel") then
+			child.Parent = frame:FindFirstChildOfClass("ScrollingFrame")
+		end
+	end
+end
+
+-- === AnimaÃ§Ã£o de Troca de Abas === --
+local function showPageAnimated(page)
+	if currentPage and currentPage ~= page then
+		local old = currentPage
+		local fadeOut = TweenService:Create(old, TweenInfo.new(0.2), {BackgroundTransparency = 1})
+		fadeOut:Play()
+		task.wait(0.2)
+		old.Visible = false
+		old.BackgroundTransparency = 1
+	end
+
+	page.Visible = true
+	currentPage = page
+	TweenService:Create(page, TweenInfo.new(0.2), {BackgroundTransparency = 0}):Play()
+end
+
+-- Substituir showPage padrÃ£o
+showPage = showPageAnimated
+
+-- Reaplicar eventos das abas
+trollTab.MouseButton1Click:Connect(function() showPage(trollsPage) end)
+modsTab.MouseButton1Click:Connect(function() showPage(modsPage) end)
+visualTab.MouseButton1Click:Connect(function() showPage(visualPage) end)
+soundTab.MouseButton1Click:Connect(function() showPage(soundPage) end)
+advancedTab.MouseButton1Click:Connect(function() showPage(advancedPage) end)
+themeTab.MouseButton1Click:Connect(function() showPage(themePage) end)
+
+-- === AnimaÃ§Ã£o no botÃ£o de fechar === --
+closeBtn.MouseEnter:Connect(function()
+	TweenService:Create(closeBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(150, 50, 50)}):Play()
+end)
+
+closeBtn.MouseLeave:Connect(function()
+	TweenService:Create(closeBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(60, 60, 60)}):Play()
+end)
+
+-- === Extra: Som de clique suave === --
+local clickSound = Instance.new("Sound")
+clickSound.SoundId = "rbxassetid://12222005"
+clickSound.Volume = 0.4
+clickSound.Parent = player:WaitForChild("PlayerGui")
+
+local function applyClickSound(btn)
+	btn.MouseButton1Click:Connect(function()
+		clickSound:Play()
+	end)
+end
+
+-- Aplicar som em todos os botÃµes
+for _, page in pairs({modsScroll, trollScroll, visualScroll, soundScroll, advancedScroll, themeScroll}) do
+	for _, btn in pairs(page:GetChildren()) do
+		if btn:IsA("TextButton") then
+			applyClickSound(btn)
+		end
+	end
+end
+
+-- Fim da Parte 4
+print("âœ¨ Interface aprimorada com sucesso! Parte 4 finalizada.")
