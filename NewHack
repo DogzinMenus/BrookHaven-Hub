@@ -1,21 +1,171 @@
--- DataBreakerZ - Loop para excluir 'RequestCooldowns' localmente
+-- DataBreakerZ Eventos - Visual Profissional Otimizado
 -- Criado por DogzinGhost_YT
 
 -- Serviços
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
--- Loop de verificação constante
-task.spawn(function()
-    while true do
-        for _, obj in ipairs(game:GetDescendants()) do
-            if obj:IsA("RemoteEvent") and obj.Name == "RequestCooldowns" then
-                pcall(function()
-                    obj:Destroy()
-                    warn("RemoteEvent 'RequestCooldowns' foi excluído localmente.")
-                end)
-            end
-        end
-        task.wait(1) -- Espera 1 segundo antes de verificar de novo
-    end
+-- GUI Base
+local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+gui.Name = "DataBreakerZ_Eventos"
+gui.ResetOnSpawn = false
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+-- BOTÃO DE ABRIR (ARRASTÁVEL)
+local open = Instance.new("TextButton")
+open.Size = UDim2.new(0, 45, 0, 45)
+open.Position = UDim2.new(0, 20, 0.5, -22)
+open.Text = "☰"
+open.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+open.TextColor3 = Color3.fromRGB(255, 0, 0)
+open.TextScaled = true
+open.Font = Enum.Font.GothamBlack
+open.Parent = gui
+Instance.new("UICorner", open)
+
+-- Draggable botão (manual)
+local dragging = false
+local dragInput, mousePos, framePos
+
+open.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = true
+		mousePos = input.Position
+		framePos = open.Position
+
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then dragging = false end
+		end)
+	end
+end)
+
+open.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement then
+		dragInput = input
+	end
+end)
+
+game:GetService("UserInputService").InputChanged:Connect(function(input)
+	if input == dragInput and dragging then
+		local delta = input.Position - mousePos
+		open.Position = UDim2.new(framePos.X.Scale, framePos.X.Offset + delta.X, framePos.Y.Scale, framePos.Y.Offset + delta.Y)
+	end
+end)
+
+-- FRAME PRINCIPAL
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0, 440, 0, 300)
+frame.Position = UDim2.new(0.5, -220, 0.5, -150)
+frame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+frame.Visible = false
+frame.Active = true
+frame.Draggable = true
+Instance.new("UICorner", frame)
+
+-- TÍTULO
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1, 0, 0, 35)
+title.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+title.Text = "DataBreakerZ - Eventos"
+title.TextColor3 = Color3.fromRGB(255, 0, 0)
+title.TextScaled = true
+title.Font = Enum.Font.GothamBold
+Instance.new("UICorner", title)
+
+-- BOTÃO DE FECHAR
+local close = Instance.new("TextButton", frame)
+close.Size = UDim2.new(0, 35, 0, 35)
+close.Position = UDim2.new(1, -40, 0, 0)
+close.Text = "X"
+close.TextColor3 = Color3.fromRGB(255, 255, 255)
+close.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+close.Font = Enum.Font.GothamBold
+close.TextScaled = true
+Instance.new("UICorner", close)
+
+-- SCROLLING FRAME DE ABAS (ROLÁVEL)
+local tabHolder = Instance.new("ScrollingFrame", frame)
+tabHolder.Size = UDim2.new(0, 110, 1, -35)
+tabHolder.Position = UDim2.new(0, 0, 0, 35)
+tabHolder.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+tabHolder.ScrollBarThickness = 6
+tabHolder.CanvasSize = UDim2.new(0, 0, 0, 120)
+Instance.new("UICorner", tabHolder)
+
+-- LAYOUT DAS ABAS
+local layout = Instance.new("UIListLayout", tabHolder)
+layout.Padding = UDim.new(0, 6)
+layout.SortOrder = Enum.SortOrder.LayoutOrder
+
+-- ÁREA DE CONTEÚDO
+local content = Instance.new("Frame", frame)
+content.Size = UDim2.new(1, -120, 1, -50)
+content.Position = UDim2.new(0, 120, 0, 45)
+content.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+Instance.new("UICorner", content)
+
+-- BOTÃO DA ABA "Eventos"
+local eventosBtn = Instance.new("TextButton", tabHolder)
+eventosBtn.Size = UDim2.new(1, -10, 0, 40)
+eventosBtn.Text = "Eventos"
+eventosBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+eventosBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+eventosBtn.Font = Enum.Font.GothamSemibold
+eventosBtn.TextScaled = true
+Instance.new("UICorner", eventosBtn)
+
+-- BOTÃO: MOSTRAR REMOTEEVENTS
+local mostrarBtn = Instance.new("TextButton", content)
+mostrarBtn.Size = UDim2.new(0, 260, 0, 45)
+mostrarBtn.Position = UDim2.new(0.5, -130, 0.2, 0)
+mostrarBtn.Text = "Mostrar RemoteEvents"
+mostrarBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+mostrarBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+mostrarBtn.Font = Enum.Font.GothamBold
+mostrarBtn.TextScaled = true
+Instance.new("UICorner", mostrarBtn)
+
+-- TOGGLE VISUAL
+local ativado = false
+
+-- FUNÇÃO DE BUSCA
+local function listarRemoteEvents(inst, path)
+	for _, obj in pairs(inst:GetChildren()) do
+		local caminho = path .. "." .. obj.Name
+		if obj:IsA("RemoteEvent") then
+			print("📡 RemoteEvent: " .. caminho)
+		end
+		listarRemoteEvents(obj, caminho)
+	end
+end
+
+-- AÇÃO DO BOTÃO
+mostrarBtn.MouseButton1Click:Connect(function()
+	ativado = not ativado
+	mostrarBtn.BackgroundColor3 = ativado and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(60, 60, 60)
+	print("🔎 Iniciando busca de RemoteEvents...")
+
+	local locais = {
+		game.ReplicatedStorage,
+		game.Workspace,
+		game.StarterGui,
+		game.StarterPack,
+		game.ReplicatedFirst,
+		game.Players
+	}
+
+	for _, localizacao in ipairs(locais) do
+		listarRemoteEvents(localizacao, localizacao.Name)
+	end
+
+	print("✅ Busca concluída.")
+end)
+
+-- ABRIR/FECHAR
+open.MouseButton1Click:Connect(function()
+	frame.Visible = not frame.Visible
+end)
+
+close.MouseButton1Click:Connect(function()
+	frame.Visible = false
 end)
